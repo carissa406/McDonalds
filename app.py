@@ -1,5 +1,6 @@
 from dash import Dash, html, dcc, callback, Output, Input, dash_table
 import dash_bootstrap_components as dbc
+import math
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
@@ -12,19 +13,18 @@ import base64
 
 # Load the data
 df = pd.read_csv('cleaned_data.csv')
-exploded_df = pd.read_csv('exploded_df.csv')
 
 # Initialize app
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 
 # Helper function to create word cloud image
-def generate_wordcloud(text):
-    wc = WordCloud(width=400, height=400, background_color='white').generate(text)
-    img = io.BytesIO()
-    wc.to_image().save(img, format='PNG')
-    img.seek(0)
-    return base64.b64encode(img.read()).decode()
+# def generate_wordcloud(text):
+#     wc = WordCloud(width=400, height=400, background_color='white').generate(text)
+#     img = io.BytesIO()
+#     wc.to_image().save(img, format='PNG')
+#     img.seek(0)
+#     return base64.b64encode(img.read()).decode()
 
 #calculating sentiment score
 sentiment_points = {'Negative': 0, 'Neutral': 1, 'Positive': 2}
@@ -77,29 +77,27 @@ app.layout = dbc.Container([
                     html.Div(id='sentiment-score')
                 ])
             ])
-        ], width=4),
+        ], width=2),
 
-        #wordcloud
-        dbc.Col([
-            dbc.Card([
-                dbc.CardHeader("Word Cloud of Reviews"),
-                dbc.CardBody([
-                    html.Img(id='wordcloud-img', style={'width': '258px', 'height': '258px'})
-                ])
-            ])
-        ], width=4),
-
-        # topics
+    # topics
         dbc.Col([
             dbc.Card([
                 dbc.CardHeader("Topics"),
                 dbc.CardBody(
-                    id='topics-card'
-                )
+                    id='topics-card')
             ])
-        ])
-    ]),
+        ], width=2),
 
+        #sentiment trend graph
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader('Sentiment Trend'),
+                dbc.CardBody([
+                    html.Div(id="sentiment-trend-graph")
+                ])
+            ])
+        ]),
+    ]),
 
     # Three bar charts
     dbc.Row([
@@ -133,9 +131,7 @@ app.layout = dbc.Container([
 
 ], fluid=True)
 
-
 # Callbacks
-
 # Update city dropdown based on selected state
 @callback(
     Output('city-dropdown', 'options'),
@@ -226,7 +222,7 @@ def update_sentiment_graph(state, city, review_period):
         y='manual_sentiment',
         color='manual_sentiment',
         category_orders={'manual_sentiment': ['Negative', 'Neutral', 'Positive']},
-        color_discrete_map={'Negative': 'red', 'Neutral': 'grey', 'Positive': 'green'}
+        color_discrete_map={'Negative': '#EF5350', 'Neutral': 'grey', 'Positive': '#4CAF50'}
     )
     fig.update_layout(showlegend=False, xaxis_title='Count', yaxis_title='Sentiment')
     return fig
@@ -258,12 +254,20 @@ def update_sentiment_score(state, city, review_period):
     # Round the percentage to the nearest integer and remove decimals
     sentiment_score_percent = int(round(sentiment_score_percent))
 
+    # Set the color based on sentiment score
+    if sentiment_score_percent > 75:
+        color = "#28a745"  # Green for high score
+    elif sentiment_score_percent > 50:
+        color = "#ffc107"  # Yellow for neutral score
+    else:
+        color = "#dc3545"  # Red for low score
+
     # Create the donut chart
     fig = go.Figure(go.Pie(
         values=[sentiment_score_percent, 100 - sentiment_score_percent],
         labels=["Sentiment", "Remaining"],
         hole=0.8,
-        marker=dict(colors=["#28a745", "#e0e0e0"]),
+        marker=dict(colors=[color, "#e0e0e0"]),
         textinfo="none",
         hoverinfo="label+percent"
     ))
@@ -289,64 +293,182 @@ def update_sentiment_score(state, city, review_period):
 
     return dcc.Graph(figure=fig)
 
-# Update word cloud image
-@callback(
-    Output('wordcloud-img', 'src'),
-    Input('state-dropdown', 'value'),
-    Input('city-dropdown', 'value'),
-    Input('review-period-dropdown', 'value')
-)
-def update_wordcloud(state, city, review_period):
-    filtered = df[
-        (df['State'] == state) & 
-        (df['City'] == city) & 
-        (df['review_period'] == review_period)
-    ]
-    if filtered.empty:
-        return None
-    text = " ".join(filtered['cleaned_review'].dropna().astype(str))
-    if not text.strip():
-        text = "No reviews available for this selection."
-    encoded_image = generate_wordcloud(text)
-    return f'data:image/png;base64,{encoded_image}'
-
+#topics card
 @callback(
     Output('topics-card', 'children'),
     Input('state-dropdown', 'value'),
     Input('city-dropdown', 'value'),
     Input('review-period-dropdown', 'value')
 )
-def update_topics_card(state,city, review_period):
+def update_topics_card(state, city, review_period):
     filtered = df[
-    (df['State'] == state) & 
-    (df['City'] == city) & 
-    (df['review_period'] == review_period)
+        (df['State'] == state) & 
+        (df['City'] == city) & 
+        (df['review_period'] == review_period)
     ]
     if filtered.empty:
         return "Not available for this selection."
     
-    topic_counts = {}
+    # Initialize dictionary to hold topic sentiment scores and counts
+    topic_scores = {}
 
-    for topic in exploded_df['manual_topic'].unique():
-        topic_reviews = exploded_df[exploded_df['manual_topic'] == topic]
+    # Loop through each unique topic
+    for topic in df['manual_topic'].unique():
+        # Filter reviews for the current topic
+        if topic == "Other":
+            continue
+        topic_reviews = filtered[filtered['manual_topic'] == topic]
+        
+        # Calculate sentiment counts for this topic
         positive_reviews = topic_reviews[topic_reviews['manual_sentiment'] == 'Positive'].shape[0]
         negative_reviews = topic_reviews[topic_reviews['manual_sentiment'] == 'Negative'].shape[0]
         neutral_reviews = topic_reviews[topic_reviews['manual_sentiment'] == 'Neutral'].shape[0]
 
-        topic_counts[topic] = {'Positive': positive_reviews, 'Negative': negative_reviews, 'Neutral': neutral_reviews}
+        total_reviews = positive_reviews + negative_reviews + neutral_reviews
+        if total_reviews > 0:
+            sentiment_score = (positive_reviews * 2 + neutral_reviews) / (total_reviews * 2) * 100
+        else:
+            sentiment_score = 0  # If no reviews, assign 0 score
 
+        # Add sentiment score to dictionary
+        topic_scores[topic] = {
+            'sentiment_score': sentiment_score, 
+            'positive_reviews': positive_reviews, 
+            'negative_reviews': negative_reviews, 
+            'neutral_reviews': neutral_reviews
+        }
+
+    # Create topic score cards with a circle for each topic
     topic_html = []
-    for topic, counts in topic_counts.items():
+    
+    for topic, scores in topic_scores.items():
+        rounded_score = math.ceil(scores['sentiment_score'])
+        
+        # Determine color based on sentiment score
+        if rounded_score > 75:
+            color = "#28a745"  # Green for high score
+        elif rounded_score > 50:
+            color = "#ffc107"  # Yellow for neutral score
+        else:
+            color = "#dc3545"  # Red for low score
+        
+        # Create a circle with the sentiment score inside
         topic_html.append(
-            dbc.Card([
-                dbc.CardHeader(topic),
-                dbc.CardBody([
-                    html.Div(f"Positive Reviews: {counts['Positive']}"),
-                    html.Div(f"Negative Reviews: {counts['Negative']}"),
-                    html.Div(f"Neutral Reviews: {counts['Neutral']}")
-                ])
-            ])
+                html.Div(
+                    style={
+                        "display": "flex", 
+                        "align-items": "center",  # Center the topic and circle horizontally
+                        "margin-bottom": "10px"  # Space between items
+                    },
+                    children=[
+                        html.Div(
+                            topic,
+                            style={
+                                "font-size": "16px", 
+                                "font-weight": "bold", 
+                                "width": "150px"
+                            }
+                        ),
+                        html.Div(
+                            f"{rounded_score}",
+                            style={
+                                "display": "flex",
+                                "justify-content": "center",
+                                "align-items": "center",
+                                "width": "50px",  # Set size of circle
+                                "height": "50px",
+                                "border-radius": "50%",  # Make it a circle
+                                "background-color": color,  # Set color dynamically
+                                "color": "white",  # Text color
+                                "font-size": "14px",  # Adjust font size
+                                "font-weight": "bold",
+                            },
+                        ),
+                    ]
+                )
         )
+
+    # Wrap the topic circles in a dbc.Row to display them in a single row
+    return dbc.Row(topic_html)
+
+
+@callback(
+    Output('sentiment-trend-graph', 'children'),
+    Input('state-dropdown', 'value'),
+    Input('city-dropdown', 'value'),
+)
+def generate_sentiment_trend_graph(state, city):
+    # Define the correct order for review_period
+    period_order = [
+        "Past 6 Months", "1 Year Ago", "2 Years Ago", "3 Years Ago",
+        "4 Years Ago", "5 Years Ago", "6 Years Ago", "7 Years Ago",
+        "8 Years Ago", "9 Years Ago", "10 Years Ago"
+    ]
+
+    # Filter for selected state and city
+    filtered = df[(df['State'] == state) & (df['City'] == city)]
+    if filtered.empty:
+        return html.Div("No data available for this selection.")
+
+    # Initialize a dictionary for scores
+    trend_data = {}
+
+    # Group by review_period and compute sentiment scores
+    for period, group in filtered.groupby('review_period'):
+        pos = group[group['manual_sentiment'] == 'Positive'].shape[0]
+        neu = group[group['manual_sentiment'] == 'Neutral'].shape[0]
+        neg = group[group['manual_sentiment'] == 'Negative'].shape[0]
+        total = pos + neu + neg
+
+        score = (pos * 2 + neu) / (total * 2) * 100 if total > 0 else 0
+        trend_data[period] = round(score, 2)
+
+    # Create DataFrame from full list to ensure correct order and fill missing with NaN
+    trend_df = pd.DataFrame({
+        "review_period": period_order,
+        "sentiment_score": [trend_data.get(p, None) for p in period_order]
+    })
+
+    # Create the line chart
+    fig = px.line(
+        trend_df,
+        x='review_period',
+        y='sentiment_score',
+        markers=True,
+        labels={'review_period': 'Review Period', 'sentiment_score': 'Sentiment Score (%)'},
+        title=f"Overall Sentiment Score Trend in {city}, {state}",
+        category_orders={"review_period": period_order}
+    )
+    fig.update_layout(
+        height=400,
+        xaxis_title="Review Period",
+        yaxis_title="Sentiment Score (%)",
+        yaxis_range=[0, 100]
+    )
+
+    return dcc.Graph(figure=fig)
+
+# Update word cloud image
+# @callback(
+#     Output('wordcloud-img', 'src'),
+#     Input('state-dropdown', 'value'),
+#     Input('city-dropdown', 'value'),
+#     Input('review-period-dropdown', 'value')
+# )
+# def update_wordcloud(state, city, review_period):
+#     filtered = df[
+#         (df['State'] == state) & 
+#         (df['City'] == city) & 
+#         (df['review_period'] == review_period)
+#     ]
+#     if filtered.empty:
+#         return None
+#     text = " ".join(filtered['cleaned_review'].dropna().astype(str))
+#     if not text.strip():
+#         text = "No reviews available for this selection."
+#     encoded_image = generate_wordcloud(text)
+#     return f'data:image/png;base64,{encoded_image}'
+
 
 # Run app
 if __name__ == '__main__':
