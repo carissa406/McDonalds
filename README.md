@@ -4,7 +4,7 @@
 
 ## Overview
 This dashboard allows users to explore and analyze sentiment trends of customer reviews for McDonald's across different states, cities, and review periods. The dashboard provides key insights into the sentiment distribution, rating distribution, and review length distribution through interactive graphs.
-Please see my reviews.ipynb file or the PowerPoint Presentation for more in depth analysis. 
+**Please see my reviews.ipynb file or the PowerPoint Presentation for more in depth analysis. **
 
 The application uses sentiment analysis to categorize customer reviews into positive, negative, and neutral sentiments, and visualizes these insights in a clean, user-friendly layout.
 
