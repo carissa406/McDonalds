@@ -36,7 +36,7 @@ To run this project locally, follow these steps:
 
 1. Clone this repository to your local machine:
    ```bash
-   git clone https://github.com/yourusername/mcdonalds-review-dashboard.git
+   git clone https://github.com/carissa406/McDonalds.git
    cd mcdonalds-review-dashboard
 2. Create and activate a virtual environment
    ```bash
