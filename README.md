@@ -1,6 +1,6 @@
 # McDonald's Review Sentiment Dashboard
 
-![Dashboard](url)
+![Dashboard](https://github.com/carissa406/McDonalds/blob/main/dashboard.PNG)
 
 ## Overview
 This dashboard allows users to explore and analyze sentiment trends of customer reviews for McDonald's across different states, cities, and review periods. The dashboard provides key insights into the sentiment distribution, rating distribution, and review length distribution through interactive graphs.
