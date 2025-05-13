@@ -5,6 +5,8 @@
 ## Overview
 This dashboard allows users to explore and analyze sentiment trends of customer reviews for McDonald's across different states, cities, and review periods. The dashboard provides key insights into the sentiment distribution, rating distribution, and review length distribution through interactive graphs.
 
+### **Please see my reviews.ipynb file or the PowerPoint Presentation for more in depth analysis.**
+
 The application uses sentiment analysis to categorize customer reviews into positive, negative, and neutral sentiments, and visualizes these insights in a clean, user-friendly layout.
 
 ## Key Features
@@ -34,7 +36,7 @@ To run this project locally, follow these steps:
 
 1. Clone this repository to your local machine:
    ```bash
-   git clone https://github.com/yourusername/mcdonalds-review-dashboard.git
+   git clone https://github.com/carissa406/McDonalds.git
    cd mcdonalds-review-dashboard
 2. Create and activate a virtual environment
    ```bash
