@@ -7,6 +7,9 @@ This dashboard allows users to explore and analyze sentiment trends of customer 
 
 ### **Please see my reviews.ipynb file or the PowerPoint Presentation for more in depth analysis.**
 
+Google Slides Version (No Download)
+https://docs.google.com/presentation/d/1P4mWwdSvTcpc9yQCYTSCIPGIl6QspSt-KO3aHx4jc5c/edit?usp=sharing 
+
 The application uses sentiment analysis to categorize customer reviews into positive, negative, and neutral sentiments, and visualizes these insights in a clean, user-friendly layout.
 
 ## Key Features
